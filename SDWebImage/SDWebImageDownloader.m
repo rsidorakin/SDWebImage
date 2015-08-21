@@ -116,7 +116,8 @@ static NSString *const kCompletedCallbackKey = @"completed";
     __block SDWebImageDownloaderOperation *operation;
     __weak __typeof(self)wself = self;
 
-    [self addProgressCallback:progressBlock andCompletedBlock:completedBlock forURL:url createCallback:^{
+    NSString *urlHash = @([[url absoluteString] hash]).stringValue;
+    [self addProgressCallback:progressBlock andCompletedBlock:completedBlock forURL:urlHash createCallback:^{
         NSTimeInterval timeoutInterval = wself.downloadTimeout;
         if (timeoutInterval == 0.0) {
             timeoutInterval = 15.0;
@@ -139,7 +140,7 @@ static NSString *const kCompletedCallbackKey = @"completed";
                                                              if (!sself) return;
                                                              __block NSArray *callbacksForURL;
                                                              dispatch_sync(sself.barrierQueue, ^{
-                                                                 callbacksForURL = [sself.URLCallbacks[url] copy];
+                                                                 callbacksForURL = [sself.URLCallbacks[urlHash] copy];
                                                              });
                                                              for (NSDictionary *callbacks in callbacksForURL) {
                                                                  dispatch_async(dispatch_get_main_queue(), ^{
@@ -153,9 +154,9 @@ static NSString *const kCompletedCallbackKey = @"completed";
                                                             if (!sself) return;
                                                             __block NSArray *callbacksForURL;
                                                             dispatch_barrier_sync(sself.barrierQueue, ^{
-                                                                callbacksForURL = [sself.URLCallbacks[url] copy];
+                                                                callbacksForURL = [sself.URLCallbacks[urlHash] copy];
                                                                 if (finished) {
-                                                                    [sself.URLCallbacks removeObjectForKey:url];
+                                                                    [sself.URLCallbacks removeObjectForKey:urlHash];
                                                                 }
                                                             });
                                                             for (NSDictionary *callbacks in callbacksForURL) {
@@ -167,7 +168,7 @@ static NSString *const kCompletedCallbackKey = @"completed";
                                                             SDWebImageDownloader *sself = wself;
                                                             if (!sself) return;
                                                             dispatch_barrier_async(sself.barrierQueue, ^{
-                                                                [sself.URLCallbacks removeObjectForKey:url];
+                                                                [sself.URLCallbacks removeObjectForKey:urlHash];
                                                             });
                                                         }];
         operation.shouldDecompressImages = wself.shouldDecompressImages;
@@ -193,7 +194,7 @@ static NSString *const kCompletedCallbackKey = @"completed";
     return operation;
 }
 
-- (void)addProgressCallback:(SDWebImageDownloaderProgressBlock)progressBlock andCompletedBlock:(SDWebImageDownloaderCompletedBlock)completedBlock forURL:(NSURL *)url createCallback:(SDWebImageNoParamsBlock)createCallback {
+- (void)addProgressCallback:(SDWebImageDownloaderProgressBlock)progressBlock andCompletedBlock:(SDWebImageDownloaderCompletedBlock)completedBlock forURL:(NSString *)url createCallback:(SDWebImageNoParamsBlock)createCallback {
     // The URL will be used as the key to the callbacks dictionary so it cannot be nil. If it is nil immediately call the completed block with no image or data.
     if (url == nil) {
         if (completedBlock != nil) {
